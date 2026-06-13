@@ -1,7 +1,7 @@
 # Okta Device Posture Provider — findings & working recipe
 
 This documents a working, end-to-end proof of concept of Okta's **Device Posture
-Provider** (Early Access) integration, where **Fleet acts as a SAML IdP** that
+Provider** integration, where **Fleet acts as a SAML IdP** that
 reports device posture (`IsManaged`/`IsCompliant`) to Okta, and Okta gates app
 access on it via Device Assurance.
 
@@ -156,9 +156,11 @@ Failure path: to deny an unknown/untrusted device, return
 
 All of these are required; each was a distinct discovery.
 
-1. **Enable EA features:** *Settings → Features* → enable **Device Posture
-   Provider** and **Device Signal Collection**. (Without the latter, the
-   "Show device signal collection rules" action below doesn't appear.)
+1. **Enable Device Signal Collection (EA):** *Settings → Features* → enable
+   **Device Signal Collection**. (The Device Posture Provider itself is GA and
+   needs no toggle, but without Signal Collection the "Show device signal
+   collection rules" action below — which is what actually invokes the posture
+   IdP — doesn't appear.)
 2. **Identity Provider:** *Security → Identity Providers → Add → SAML 2.0*, IdP
    Usage = **Device posture provider**. Issuer URI + SSO URL + Destination point
    at Fleet; upload Fleet's IdP signing cert. Request binding HTTP POST works.
@@ -245,13 +247,13 @@ path — so the posture provider's hypothesized "invisible" benefit is not real.
 
 | | Possession-factor IdP (shipping) | Device Posture Provider (this research) |
 | --- | --- | --- |
-| Okta feature maturity | GA | **Double Early Access** (Posture Provider + Signal Collection); no SLA, behavior can change |
+| Okta feature maturity | GA | Posture Provider is GA, but gating **requires Device Signal Collection (EA)** to invoke it — so a hard EA dependency remains; behavior can change |
 | Okta config surface | IdP + auth method chain | IdP + endpoint integration + device assurance policy + **signal collection rule** + DENY catch-all |
 | Undocumented requirements | none material | Response-level Issuer + **AppContext echo** (posture silently dropped if missing) |
 | Okta Verify independence | **clean** — Fleet *is* the factor | **re-entangled** — `DEVICE_IDP` attaches to Okta's device record; Registered/Managed rule conditions force OV back into signal collection |
 | Deny / remediation UX | Fleet redirects to its own remediation page | Okta's generic deny screen (optional custom instructions, Okta-controlled) |
 | Bypass ("let me in once, fix later") | supported | doesn't map cleanly (would mean asserting compliant when not) |
-| Re-check frequency | provider-controllable (auth method chain) | follows Okta's auth-policy re-auth/MFA-timeout (no provider-specific frequency); behavior has **shifted during EA** — reported as both "checks every auth" and "respects reauth frequency" at different times |
+| Re-check frequency | provider-controllable (auth method chain) | follows Okta's auth-policy re-auth/MFA-timeout (no provider-specific frequency); behavior has **shifted as the integration matured** — reported as both "checks every auth" and "respects reauth frequency" at different times |
 | Device health as | a *factor* (semantically awkward) | a policy *condition* (cleaner — the one genuine upside) |
 
 **Independently corroborated.** Kolide ships this integration, and in the
@@ -260,7 +262,7 @@ MacAdmins Slack both Kolide and its customers reach the same conclusions:
   the advantage over the standard method?" and could only offer "fewer
   authenticators / simpler method chains" — i.e., the same minor
   posture-as-condition nicety, no compelling win.
-- The re-check **cadence is a moving target** during EA. Kolide reps and
+- The re-check **cadence is a moving target** as the integration matures. Kolide reps and
   customers reported it as both "checks on every authentication / no
   provider-specific frequency" *and*, after an Okta change, "no longer prompted
   every time… respecting reauth frequencies." Either way it follows Okta's
@@ -277,7 +279,8 @@ MacAdmins Slack both Kolide and its customers reach the same conclusions:
 - Even Kolide considered it **not production-ready** in mid-2025 ("a couple of
   things to polish before you could switch over… not ready yet"), and there is
   **no vendor documentation** beyond Okta's — both consistent with the
-  EA-immaturity and undocumented-requirements findings here.
+  still-maturing (Signal Collection is EA) integration and the undocumented
+  requirements found here.
 
 The decisive point is **Okta Verify independence**, which was the original
 motivation for exploring alternatives (see
@@ -288,9 +291,10 @@ require OV in the signal collection rule. The possession-factor path, where Flee
 *is* the factor, needs none of that.
 
 **Recommendation: continue with the possession-factor path; do not adopt the
-device posture provider now.** Revisit only if Okta GAs both features and removes
-the Okta-Verify / device-registration entanglement. This research is the complete
-map for that future evaluation.
+device posture provider now.** Revisit only if Okta GAs **Device Signal
+Collection** (required to invoke the posture IdP) and removes the Okta-Verify /
+device-registration entanglement. This research is the complete map for that
+future evaluation.
 
 ## Open questions / known-unknowns
 
