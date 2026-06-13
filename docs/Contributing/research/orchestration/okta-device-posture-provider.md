@@ -55,13 +55,13 @@ sequenceDiagram
   Note over U,F: Browser presents mTLS client cert (SCEP-provisioned)
   D-->>F: cert serial identifies the host
   F->>F: look up host posture (IsManaged/IsCompliant)
-  F-->>U: Signed SAML Response (posture facts + AppContext echo)
+  F-->>U: Signed SAML Response (posture facts and AppContext echo)
   U->>O: POST SAMLResponse to Okta ACS
-  O->>O: Record DEVICE_IDP signal on the device; evaluate Device Assurance + app sign-in rule
+  O->>O: Record DEVICE_IDP signal, then evaluate Device Assurance and app sign-in rule
   alt device assurance satisfied
-    O-->>A: Issue token → access granted
+    O-->>A: Issue token, access granted
   else not satisfied
-    O-->>U: "Your device doesn't meet the security requirements" (DENY)
+    O-->>U: Device does not meet security requirements (DENY)
   end
 ```
 
